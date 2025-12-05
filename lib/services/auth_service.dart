@@ -2,6 +2,8 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
+// --- SERVICIO DE AUTENTICACIÓN (SIMULADO) ---
+
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() {

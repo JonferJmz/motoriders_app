@@ -1,3 +1,4 @@
+import 'package:motoriders_app/models/reaction_model.dart';
 
 class Post {
   String id;
@@ -5,15 +6,17 @@ class Post {
   final String authorName;
   final String authorAvatarUrl;
   final String text;
-  final String? imageUrl;
+  final List<String> imageUrls;
   final DateTime timestamp;
   final String? location;
   final String? feeling;
   final List<String> taggedUsers;
   final String? clubId;
-  int likes;
   int comments;
-  bool isLiked;
+
+  // Nuevo sistema de reacciones
+  final Map<ReactionType, int> reactionCounts;
+  ReactionType? currentUserReaction; // Qué ha reaccionado el usuario actual
 
   Post({
     this.id = '',
@@ -21,14 +24,17 @@ class Post {
     required this.authorName,
     required this.authorAvatarUrl,
     required this.text,
-    this.imageUrl,
+    this.imageUrls = const [],
     required this.timestamp,
     this.location,
     this.feeling,
     this.taggedUsers = const [],
     this.clubId,
-    this.likes = 0,
     this.comments = 0,
-    this.isLiked = false,
+    this.reactionCounts = const {},
+    this.currentUserReaction,
   });
+
+  // Getter para el total de reacciones
+  int get totalReactions => reactionCounts.values.fold(0, (sum, count) => sum + count);
 }

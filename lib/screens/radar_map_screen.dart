@@ -147,9 +147,10 @@ class _RadarMapScreenState extends State<RadarMapScreen> {
             initialCameraPosition: _kDefaultLocation,
             onMapCreated: _onMapCreated,
             markers: {..._clubMarkers, ..._placeMarkers},
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            padding: const EdgeInsets.only(top: 120, bottom: 20),
+            myLocationEnabled: true,       // Muestra el punto azul
+            myLocationButtonEnabled: false, // Desactiva el botón nativo de centrado
+            zoomControlsEnabled: false,    // Desactiva los botones de zoom
+            padding: const EdgeInsets.only(top: 120, bottom: 80), // Padding para la UI
           ),
           _buildHeader(),
           _buildFilterChips(),

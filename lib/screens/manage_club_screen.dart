@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:motoriders_app/models/club_model.dart';
+import 'package:motoriders_app/widgets/member_management_tab.dart';
 import 'package:motoriders_app/widgets/permission_management_tab.dart';
 import 'package:motoriders_app/widgets/rank_management_tab.dart';
 
@@ -31,11 +32,8 @@ class _ManageClubScreenState extends State<ManageClubScreen> {
         ),
         body: TabBarView(
           children: [
-            // TODO: Implementar vista de gestión de miembros
-            const Center(child: Text("Gestionar Miembros (Próximamente)")),
-            // Vista de gestión de rangos
+            MemberManagementTab(club: widget.club),
             RankManagementTab(club: widget.club),
-            // Vista de gestión de permisos
             PermissionManagementTab(club: widget.club),
           ],
         ),

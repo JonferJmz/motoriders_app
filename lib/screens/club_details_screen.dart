@@ -10,7 +10,9 @@ import 'package:motoriders_app/widgets/club_wall_tab.dart';
 
 class ClubDetailsScreen extends StatelessWidget {
   final Club club;
-  final bool _isCurrentUserAdmin = true; // Simulación
+  // Simulación: El usuario actual es administrador de este club.
+  // En una app real, esto vendría de tu servicio de autenticación.
+  final bool _isCurrentUserAdmin = true; 
 
   const ClubDetailsScreen({super.key, required this.club});
 
@@ -19,14 +21,6 @@ class ClubDetailsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        floatingActionButton: _isCurrentUserAdmin ? FloatingActionButton.extended(
-          onPressed: () {
-             Navigator.push(context, MaterialPageRoute(builder: (context) => ManageClubScreen(club: club)));
-          },
-          label: const Text('Gestionar'),
-          icon: const Icon(Icons.settings),
-          backgroundColor: AppColors.teslaRed,
-        ) : null,
         body: NestedScrollView(
           headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
             return <Widget>[
@@ -34,6 +28,16 @@ class ClubDetailsScreen extends StatelessWidget {
                 expandedHeight: 200.0,
                 floating: false,
                 pinned: true,
+                actions: [
+                  if (_isCurrentUserAdmin)
+                    IconButton(
+                      icon: const Icon(Icons.settings),
+                      tooltip: 'Gestionar Club',
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => ManageClubScreen(club: club)));
+                      },
+                    ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                     centerTitle: true,
                     title: Text(club.name,
@@ -62,7 +66,8 @@ class ClubDetailsScreen extends StatelessWidget {
             children: <Widget>[
               ClubWallTab(clubId: club.id),
               ClubChatTab(clubId: club.id),
-              ClubMembersTab(clubId: club.id),
+              // Le pasamos el parámetro para que sepa si mostrar las opciones
+              ClubMembersTab(clubId: club.id, isCurrentUserAdmin: _isCurrentUserAdmin),
             ],
           ),
         ),

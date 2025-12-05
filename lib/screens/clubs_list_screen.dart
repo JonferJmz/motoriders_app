@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:motoriders_app/models/club_model.dart';
+import 'package:motoriders_app/screens/explore_clubs_screen.dart';
 import 'package:motoriders_app/services/club_service.dart';
 import 'package:motoriders_app/widgets/club_list_tile.dart';
 
@@ -13,7 +14,7 @@ class ClubsListScreen extends StatefulWidget {
 
 class _ClubsListScreenState extends State<ClubsListScreen> {
   final ClubService _clubService = ClubService();
-  Future<List<Club>>? _myClubsFuture;
+  late Future<List<Club>> _myClubsFuture;
 
   @override
   void initState() {
@@ -25,15 +26,14 @@ class _ClubsListScreenState extends State<ClubsListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis Clubes', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () { /* TODO: Implementar búsqueda de clubes */ },
-          ),
-        ],
+        title: const Text('Mis Clubes'),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const ExploreClubsScreen()));
+        },
+        label: const Text('Explorar'),
+        icon: const Icon(Icons.explore_outlined),
       ),
       body: FutureBuilder<List<Club>>(
         future: _myClubsFuture,
@@ -41,26 +41,22 @@ class _ClubsListScreenState extends State<ClubsListScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No perteneces a ningún club.'));
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error al cargar tus clubes.'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Aún no te has unido a ningún club.'));
           }
 
           final clubs = snapshot.data!;
-
           return ListView.builder(
+            padding: const EdgeInsets.only(bottom: 100), // <-- ESPACIO DE SEGURIDAD
             itemCount: clubs.length,
             itemBuilder: (context, index) {
               return ClubListTile(club: clubs[index]);
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implementar pantalla para crear club
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add),
       ),
     );
   }

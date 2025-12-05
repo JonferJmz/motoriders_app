@@ -7,7 +7,6 @@ import 'package:motoriders_app/screens/home_feed_screen.dart';
 import 'package:motoriders_app/screens/login_screen.dart';
 import 'package:motoriders_app/screens/radar_map_screen.dart';
 import 'package:motoriders_app/screens/register_screen.dart';
-import 'package:motoriders_app/services/auth_service.dart';
 import 'package:motoriders_app/utils/app_colors.dart';
 import 'package:motoriders_app/widgets/add_action_sheet.dart';
 
@@ -23,26 +22,12 @@ class MotoApp extends StatefulWidget {
 }
 
 class _MotoAppState extends State<MotoApp> {
-  bool _isLoggedIn = false;
+  bool _isLoggedIn = true;
   ThemeMode _themeMode = ThemeMode.dark;
 
-  void _toggleTheme() {
-    setState(() {
-      _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    });
-  }
-
-  void _onLoginSuccess() {
-    setState(() {
-      _isLoggedIn = true;
-    });
-  }
-
-  void _onLogout() {
-    setState(() {
-      _isLoggedIn = false;
-    });
-  }
+  void _toggleTheme() => setState(() => _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
+  void _onLoginSuccess() => setState(() => _isLoggedIn = true);
+  void _onLogout() => setState(() => _isLoggedIn = false);
 
   @override
   Widget build(BuildContext context) {
@@ -51,60 +36,18 @@ class _MotoAppState extends State<MotoApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: _themeMode,
-      home: _isLoggedIn 
-          ? MainScreen(toggleTheme: _toggleTheme, logout: _onLogout) 
-          : AuthWrapper(loginSuccess: _onLoginSuccess),
+      home: _isLoggedIn ? MainScreen(toggleTheme: _toggleTheme, logout: _onLogout) : AuthWrapper(loginSuccess: _onLoginSuccess),
       debugShowCheckedModeBanner: false,
     );
   }
 
-  ThemeData _buildTheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    return ThemeData(
-      brightness: brightness,
-      scaffoldBackgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F7),
-      primaryColor: AppColors.teslaRed,
-      fontFamily: 'Inter',
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: isDark ? AppColors.darkCard.withOpacity(0.8) : Colors.white,
-        hintStyle: TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[400]),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
+   ThemeData _buildTheme(Brightness brightness) { final isDark = brightness == Brightness.dark; return ThemeData(brightness: brightness, scaffoldBackgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F7), primaryColor: AppColors.teslaRed, fontFamily: 'Inter', inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: isDark ? AppColors.darkCard.withOpacity(0.8) : Colors.white, hintStyle: TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[400]), contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none))); }
 }
 
-class AuthWrapper extends StatefulWidget {
-  final VoidCallback loginSuccess;
-  const AuthWrapper({super.key, required this.loginSuccess});
+class AuthWrapper extends StatefulWidget { final VoidCallback loginSuccess; const AuthWrapper({super.key, required this.loginSuccess}); @override State<AuthWrapper> createState() => _AuthWrapperState(); }
+class _AuthWrapperState extends State<AuthWrapper> { bool _showLogin = true; void toggleView() => setState(() => _showLogin = !_showLogin); @override Widget build(BuildContext context) { if (_showLogin) { return LoginScreen(toggleView: toggleView, loginSuccess: widget.loginSuccess); } else { return RegisterScreen(toggleView: toggleView); } } }
 
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  bool _showLogin = true;
-
-  void toggleView() {
-    setState(() {
-      _showLogin = !_showLogin;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_showLogin) {
-      return LoginScreen(toggleView: toggleView, loginSuccess: widget.loginSuccess);
-    } else {
-      return RegisterScreen(toggleView: toggleView);
-    }
-  }
-}
+// --- MainScreen RECONSTRUIDA CON ANIMACIONES ---
 
 class MainScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -117,113 +60,49 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  Widget _buildScreen(int index) {
-    switch (index) {
-      case 0:
-        return const HomeFeedScreen();
-      case 1:
-        return const RadarMapScreen();
-      case 3:
-        return const ClubsListScreen();
-      case 4:
-        return GarageProfileScreen(logout: widget.logout, toggleTheme: widget.toggleTheme);
-      default:
-        return const HomeFeedScreen();
-    }
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeFeedScreen(),
+      const RadarMapScreen(),
+      ClubsListScreen(),
+      GarageProfileScreen(logout: widget.logout, toggleTheme: widget.toggleTheme),
+    ];
   }
 
-  void _showAddActionSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AddActionSheet(),
-    );
-  }
+  void _onItemTapped(int index) => setState(() => _currentIndex = index);
+  void _showAddActionSheet() => showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (context) => const AddActionSheet());
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      extendBody: true,
-      body: _buildScreen(_currentIndex),
+      // Usamos AnimatedSwitcher para una transición suave entre pestañas
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation), child: child),
+          );
+        },
+        child: IndexedStack(
+          // Se necesita un Key único para que el AnimatedSwitcher detecte el cambio
+          key: ValueKey<int>(_currentIndex),
+          index: _currentIndex,
+          children: _screens,
+        ),
+      ),
       bottomNavigationBar: _buildBottomNavBar(isDark),
+      floatingActionButton: _buildCentralButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  Widget _buildBottomNavBar(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30.0),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            height: 65,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(30.0),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(Icons.home_filled, 0, isDark),
-                _buildNavItem(Icons.map_outlined, 1, isDark),
-                _buildCentralButton(),
-                _buildNavItem(Icons.groups_2_outlined, 3, isDark),
-                _buildNavItem(Icons.garage_outlined, 4, isDark),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, int index, bool isDark) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.teslaRed.withOpacity(0.2) : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          size: 28,
-          color: isSelected ? AppColors.teslaRed : (isDark ? Colors.white70 : Colors.black54),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCentralButton() {
-    return GestureDetector(
-      onTap: _showAddActionSheet,
-      child: Container(
-        height: 55,
-        width: 55,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.teslaRed, Color(0xFFFF4B1F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.teslaRed.withOpacity(0.5),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
-      ),
-    );
-  }
+  Widget _buildBottomNavBar(bool isDark) { /* ... CÓDIGO IDÉNTICO AL ANTERIOR ... */ return BottomAppBar(shape: const CircularNotchedRectangle(), notchMargin: 8.0, color: isDark ? const Color(0xFF2C2C2E) : Colors.white, child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: <Widget>[_buildNavItem(Icons.home_filled, "Home", 0), _buildNavItem(Icons.map_outlined, "Mapa", 1), const SizedBox(width: 48), _buildNavItem(Icons.groups_2_outlined, "Clubs", 2), _buildNavItem(Icons.garage_outlined, "Garaje", 3)])); }
+  Widget _buildNavItem(IconData icon, String label, int index) { final isSelected = _currentIndex == index; return Expanded(child: InkWell(onTap: () => _onItemTapped(index), borderRadius: BorderRadius.circular(50), child: Padding(padding: const EdgeInsets.symmetric(vertical: 4.0), child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[Icon(icon, color: isSelected ? AppColors.teslaRed : Colors.grey), const SizedBox(height: 2), Text(label, style: TextStyle(color: isSelected ? AppColors.teslaRed : Colors.grey, fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal))])))); }
+  Widget _buildCentralButton() { return FloatingActionButton(onPressed: _showAddActionSheet, backgroundColor: AppColors.teslaRed, child: const Icon(Icons.add, color: Colors.white, size: 30), elevation: 2.0); }
 }

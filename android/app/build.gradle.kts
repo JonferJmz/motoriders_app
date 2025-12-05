@@ -20,11 +20,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.motoriders_app"
-        minSdk = flutter.minSdkVersion // Requerido para mapas
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true
     }
 
     buildTypes {
@@ -38,6 +37,4 @@ flutter {
     source = "../.."
 }
 
-dependencies {
-    implementation("androidx.multidex:multidex:2.0.1")
-}
+dependencies {}

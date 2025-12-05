@@ -8,14 +8,12 @@ class ClubMember {
   final String id;
   final String name;
   final String avatarUrl;
-  final String rank;
+  String rank; // Cambiado a no final para poder modificarlo
 
   ClubMember({required this.id, required this.name, required this.avatarUrl, required this.rank});
 }
 
 class ClubService {
-
-  // ... (código de clubes y rangos existente) ...
 
   // Simula una base de datos de miembros por club
   final Map<String, List<ClubMember>> _clubMembers = {
@@ -111,5 +109,19 @@ class ClubService {
   Future<List<ClubMember>> getMembersForClub(String clubId) async {
     await Future.delayed(const Duration(milliseconds: 350));
     return _clubMembers[clubId] ?? [];
+  }
+
+  Future<void> updateMemberRank(String clubId, String memberId, String newRank) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final members = _clubMembers[clubId];
+    final member = members?.firstWhere((m) => m.id == memberId);
+    if (member != null) {
+      member.rank = newRank;
+    }
+  }
+
+  Future<void> kickMember(String clubId, String memberId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    _clubMembers[clubId]?.removeWhere((m) => m.id == memberId);
   }
 }

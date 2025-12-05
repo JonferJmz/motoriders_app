@@ -1,16 +1,16 @@
 
-class ChatMessage {
-  final String authorId;
+class Story {
   final String authorName;
   final String authorAvatarUrl;
-  final String text;
+  final String contentUrl;
   final DateTime timestamp;
+  final bool isViewed;
 
-  ChatMessage({
-    required this.authorId,
+  Story({
     required this.authorName,
     required this.authorAvatarUrl,
-    required this.text,
+    required this.contentUrl,
     required this.timestamp,
+    this.isViewed = false,
   });
 }

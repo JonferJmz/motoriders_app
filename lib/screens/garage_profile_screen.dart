@@ -1,229 +1,147 @@
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:motoriders_app/models/motorcycle_model.dart';
-import 'package:motoriders_app/screens/settings_screen.dart';
-import 'package:motoriders_app/services/profile_service.dart';
+import 'package:motoriders_app/models/post_model.dart';
+import 'package:motoriders_app/models/user_model.dart';
+import 'package:motoriders_app/services/feed_service.dart';
+import 'package:motoriders_app/services/user_service.dart';
+import 'package:motoriders_app/widgets/post_card.dart';
 import 'package:motoriders_app/utils/app_colors.dart';
 
 class GarageProfileScreen extends StatefulWidget {
-  final VoidCallback logout;
-  final VoidCallback toggleTheme;
+  final VoidCallback? logout;
+  final VoidCallback? toggleTheme;
+  final String? userId; // Opcional, para visitar perfiles de otros
 
-  const GarageProfileScreen(
-      {super.key, required this.logout, required this.toggleTheme});
+  const GarageProfileScreen({super.key, this.logout, this.toggleTheme, this.userId});
 
   @override
   State<GarageProfileScreen> createState() => _GarageProfileScreenState();
 }
 
 class _GarageProfileScreenState extends State<GarageProfileScreen> {
-  final ProfileService _profileService = ProfileService();
-  Future<UserProfile>? _userProfileFuture;
+  final UserService _userService = UserService();
+  final FeedService _feedService = FeedService();
+  late Future<User> _userFuture;
+  late Future<List<Post>> _postsFuture;
+  late Future<bool> _isFollowingFuture;
+  late String _profileUserId;
+  bool _isCurrentUserProfile = false;
 
   @override
   void initState() {
     super.initState();
-    _userProfileFuture = _profileService.getUserProfile();
+    const currentUserId = 'user1'; 
+    _profileUserId = widget.userId ?? currentUserId;
+    _isCurrentUserProfile = _profileUserId == currentUserId;
+    _loadData();
   }
 
-  void _navigateToSettings(BuildContext context, UserProfile userProfile) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return SettingsScreen(logout: widget.logout, toggleTheme: widget.toggleTheme);
-    }));
+  void _loadData() {
+    _userFuture = _userService.getUserProfile(_profileUserId);
+    // CORRECCIÓN: Se llama a la función con el nombre correcto: getGlobalFeedPosts
+    _postsFuture = _feedService.getGlobalFeedPosts(); // Simulado para mostrar todos los posts
+    if (!_isCurrentUserProfile) {
+      _isFollowingFuture = _userService.isFollowing(_profileUserId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<User>(
+      future: _userFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return Scaffold(appBar: AppBar(), body: const Center(child: Text("No se pudo cargar el perfil.")));
+        }
+        final user = snapshot.data!;
+        return _buildProfileScaffold(context, user);
+      },
+    );
+  }
+
+  Scaffold _buildProfileScaffold(BuildContext context, User user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Colors.black
-          : const Color(0xFFF5F5F7),
-      body: FutureBuilder<UserProfile>(
-        future: _userProfileFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.teslaRed));
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return const Center(child: Text('Error al cargar el perfil.'));
-          }
-
-          final userProfile = snapshot.data!;
-          return _buildProfileView(context, userProfile);
-        },
-      ),
-    );
-  }
-
-  Widget _buildProfileView(BuildContext context, UserProfile userProfile) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- CARRUSEL DE MOTOS ---
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: PageView.builder(
-              itemCount: userProfile.motorcycles.length,
-              itemBuilder: (context, index) {
-                final motorcycle = userProfile.motorcycles[index];
-                return _buildMotorcycleHeader(context, userProfile, motorcycle);
-              },
-            ),
-          ),
-
-          // --- SECCIÓN DE ESTADÍSTICAS SOCIALES ---
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildStatColumn("34", "Clubes"),
-                  _buildStatColumn("1.2K", "Seguidores"),
-                  _buildStatColumn("89", "Seguidos"),
-                  GestureDetector(
-                    onTap: () => _navigateToSettings(context, userProfile),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade700),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.edit, size: 16),
-                          SizedBox(width: 5),
-                          Text("Editar Perfil",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  )
-                ],
-              )),
-
-          const SizedBox(height: 100), // Espacio para scroll
+      backgroundColor: isDark ? Colors.black : const Color(0xFFF5F5F7),
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(context, user),
+          SliverToBoxAdapter(child: _buildUserInfo(context, user)),
+          SliverToBoxAdapter(child: const Padding(padding: EdgeInsets.all(16.0), child: Text("Publicaciones", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)))),
+          _buildUserPosts(),
         ],
       ),
     );
   }
 
-  Widget _buildMotorcycleHeader(
-      BuildContext context, UserProfile user, Motorcycle moto) {
-    return Stack(
-      children: [
-        // FOTO DE LA MOTO (HEADER)
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: NetworkImage(moto.imageUrl),
-              fit: BoxFit.cover,
-            ),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
-            ),
-          ),
-        ),
-        // DEGRADADO OSCURO
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
-              ),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: const [0.5, 1.0],
-                colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
-              ),
-            ),
-          ),
-        ),
-        // DATOS DEL USUARIO Y MOTO
-        Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundImage: NetworkImage(user.avatarUrl),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(user.username,
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    _buildGlassTag(Icons.qr_code_scanner, "QR"),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  moto.nickname,
-                  style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -1),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 120, // Altura fija para la lista de mods
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: moto.modifications.length,
-                    itemBuilder: (context, index) {
-                      final mod = moto.modifications[index];
-                      return Text('  • ${mod.title} (${mod.description})',
-                          style: const TextStyle(
-                              color: Colors.white70, height: 1.5));
-                    },
-                  ),
-                )
-              ],
-            )),
-        // Ojo: El botón de logout ya no está aquí
-      ],
+  SliverAppBar _buildSliverAppBar(BuildContext context, User user) {
+    return SliverAppBar(
+      expandedHeight: 200.0, floating: false, pinned: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, elevation: 1,
+      actions: _isCurrentUserProfile ? [
+        IconButton(icon: const Icon(Icons.edit), onPressed: () {}),
+        IconButton(icon: const Icon(Icons.logout), onPressed: widget.logout),
+        IconButton(icon: const Icon(Icons.brightness_6_outlined), onPressed: widget.toggleTheme),
+      ] : [],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Image.network(user.coverPhotoUrl, fit: BoxFit.cover, color: Colors.black.withOpacity(0.4), colorBlendMode: BlendMode.darken),
+        title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        centerTitle: true, titlePadding: const EdgeInsets.only(left: 0, bottom: 16),
+      ),
     );
   }
 
-  Widget _buildStatColumn(String value, String label) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-      ],
-    );
-  }
-
-  Widget _buildGlassTag(IconData icon, String text) {
+  Widget _buildUserInfo(BuildContext context, User user) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.teslaRed,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: AppColors.teslaRed.withOpacity(0.4), blurRadius: 10)
+      transform: Matrix4.translationValues(0.0, -40.0, 0.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          CircleAvatar(radius: 42, backgroundColor: Theme.of(context).scaffoldBackgroundColor, child: CircleAvatar(radius: 40, backgroundImage: NetworkImage(user.avatarUrl))),
+          const SizedBox(height: 16),
+          Text(user.bio, textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.grey[600])),
+          const SizedBox(height: 20),
+          _buildStatsRow(user),
+          if (!_isCurrentUserProfile) const SizedBox(height: 20),
+          if (!_isCurrentUserProfile) _buildFollowButton(),
         ],
       ),
-      child: Row(children: [
-        Icon(icon, color: Colors.white, size: 16),
-        const SizedBox(width: 4),
-        Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
-      ]),
     );
   }
+
+  Widget _buildFollowButton() {
+    return FutureBuilder<bool>(
+      future: _isFollowingFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox(height: 48); // Placeholder
+        final isFollowing = snapshot.data!;
+        return ElevatedButton(
+          onPressed: () {
+            setState(() {
+              if (isFollowing) {
+                _userService.unfollowUser(_profileUserId);
+              } else {
+                _userService.followUser(_profileUserId);
+              }
+              _isFollowingFuture = _userService.isFollowing(_profileUserId);
+            });
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isFollowing ? Colors.grey[700] : AppColors.teslaRed,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          ),
+          child: Text(isFollowing ? 'Siguiendo' : 'Seguir'),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatsRow(User user) { return Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_buildStatItem("Posts", user.postCount.toString()), _buildStatItem("Clubs", user.clubCount.toString()), _buildStatItem("Km Recorridos", "${(user.kilometersRidden / 1000).toStringAsFixed(1)}k")]); }
+  Widget _buildStatItem(String label, String value) { return Column(children: [Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 4), Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600]))]); }
+  Widget _buildUserPosts() { return FutureBuilder<List<Post>>(future: _postsFuture, builder: (context, snapshot) { if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())); final posts = snapshot.data!; return SliverList(delegate: SliverChildBuilderDelegate((context, index) { return PostCard(post: posts[index]); }, childCount: posts.length)); }); }
 }
