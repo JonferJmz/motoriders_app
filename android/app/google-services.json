@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "539582104272",
+    "project_id": "practica-firebase-1-1d700",
+    "storage_bucket": "practica-firebase-1-1d700.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:539582104272:android:78b468ee051ba3f569d4d5",
+        "android_client_info": {
+          "package_name": "com.example.motoriders_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvbeHIwuLcTjbk-8oLEpW78qS57geN9sE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
